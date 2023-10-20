@@ -47,7 +47,9 @@ Once the operator is running you can submit Flink jobs:
 > Note: flink-job-2.yaml file needs an env var passed to it to work due to a slight modification of the manifest detailed below
 
 You can follow the logs of the sample Flink job they should look similar to this after a successful startup.
->```kubectl logs deploy/sample-job-1 -f```
+
+```kubectl logs deploy/sample-job-1 -f```
+
 >2023-10-20 06:20:38,679 INFO  org.apache.flink.runtime.checkpoint.CheckpointCoordinator    [] - Triggering checkpoint 52 (type=CheckpointType{name='Checkpoint', sharingFilesStrategy=FORWARD_BACKWARD}) @ 1697782838679 for job 2ee7024cd9cdf620bd14ba6a11dd07e7.
 >2023-10-20 06:20:38,693 INFO  org.apache.flink.runtime.checkpoint CheckpointCoordinator    [] - Completed checkpoint 52 for job 2ee7024cd9cdf620bd14ba6a11dd07e7 (15387 bytes, checkpointDuration=14 ms, finalizationTime=0 ms).
 >2023-10-20 06:20:40,679 INFO  org.apache.flink.runtime.checkpoint.CheckpointCoordinator    [] - Triggering checkpoint 53 (type=CheckpointType{name='Checkpoint', sharingFilesStrategy=FORWARD_BACKWARD}) @ 1697782840679 for job 2ee7024cd9cdf620bd14ba6a11dd07e7.
@@ -55,18 +57,37 @@ You can follow the logs of the sample Flink job they should look similar to this
 
 ## Resource Management
 
-###### Configure resource constraints for the Flink operator and jobs
+I have configured the cpu and memory allocation for the Task Manager and Job Manager for the sample job to fit the underlying infrastructure.
 
-##### Briefly describe how you would handle resource quotas and limits for Flink jobs
+This can be tuned to match the workload.
 
 ## Logging and Monitoring
 
-###### Suggest tools or practices for monitoring the health, performance and logs of the Flink jobs running in the cluster
+Create a service monitor to group the metrics from Job Manager and Task Manager to send to Prometheus.
+
+Some [configuration](https://nightlies.apache.org/flink/flink-docs-release-1.17/docs/deployment/metric_reporters/#prometheus) needs to be added to the flink-job-1.yaml.
+
+```
+spec:
+   flinkConfiguration:
+     metrics.reporter.prom.class: org.apache.flink.metrics.prometheus.PrometheusReporter
+     metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+     metrics.reporter.prom.port: 9250-9260
+     metrics.reporters: prom
+     taskmanager.network.detailed-metrics: true
+```
+
+We can then create dashboards in Grafana to view the metrics.
 
 ## Deployment & Management
 
-###### Describe how would you deploy and track updates to Flink jobs
-Flink jobs will be stored on the image and more can be added by pushing a newly build image to a image repo. Updates can also be tracked there.
+To update or redeploy a Flink application we can call the Flink API exposed by the Job Managers. To expose the JobManager APIs a Service can be created. This allows us to take a savepoint, stop a running job, submit new jobs.
+
+To redeploy you can create a script that calls the [API](https://nightlies.apache.org/flink/flink-docs-master/docs/ops/rest_api/)
+
+- Stop the job and takes a savepoint by calling the "/jobs/<jar_id>/stop"
+- Upload a new .jar file to the Job Manager "/jars/upload"
+- Run the new .jar with specified parameters "/jobs/<jar_id>/run"
 
 We could use a single flink-job.yaml file to handle different job types by using the command below. The .jar file would need to be built into the image before hand.
 ```export JOB_URI=local:///opt/flink/examples/streaming/StateMachineExample.jar```
