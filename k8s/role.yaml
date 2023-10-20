@@ -1,0 +1,55 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: flinkoperator
+rules:
+ - apiGroups:
+    - ""
+   resources:
+    - pods
+   verbs:
+    - create
+    - get
+    - list
+    - watch
+    - update
+    - delete
+ - apiGroups:
+    - ""
+   resources:
+    - services
+   verbs:
+    - create
+    - get
+    - list
+    - watch
+    - update
+    - delete
+ - apiGroups:
+    - extensions
+    - apps
+   resources:
+    - deployments
+    - deployments/status
+   verbs:
+    - create
+    - get
+    - list
+    - watch
+    - update
+    - delete
+ - apiGroups:
+    - ""
+   resources:
+    - events
+   verbs:
+    - create
+    - update
+    - patch
+---
+# creating a user 
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: flink-operator
+  namespace: flink-operator
